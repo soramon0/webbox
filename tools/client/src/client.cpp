@@ -1,4 +1,4 @@
-#include "common.h"
+#include "client.hpp"
 
 int main() {
   std::cout << "Source code for " << APP_NAME << std::endl;
