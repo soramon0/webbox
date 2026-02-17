@@ -1,4 +1,4 @@
-NAME     := client
+NAME     := tcp_client
 ROOT_DIR := ../..
 SRC_DIR  := src
 
