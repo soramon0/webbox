@@ -59,7 +59,7 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 release::
 	@$(MAKE) all release=1
 
-run:: $(NAME)
+run:: $(BUILD_DIR)/$(NAME)
 	@printf "$(MAGENTA)Running $(NAME)...$(RESET)\n"
 	./$(BUILD_DIR)/$(NAME) $(ARGS)
 
