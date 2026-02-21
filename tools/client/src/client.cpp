@@ -78,5 +78,7 @@ int main(int argc, char *argv[]) {
       std::cout << "Sent " << bytes_sent << " bytes.\n";
     }
   }
+  std::cout << "Closing socket..." << std::endl;
+  CLOSESOCKET(socket_peer);
   return (EXIT_SUCCESS);
 }
