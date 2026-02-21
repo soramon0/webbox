@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
     fd_set reads_set;
     FD_ZERO(&reads_set);
     FD_SET(socket_peer, &reads_set);
-    FD_SET(STDOUT_FILENO, &reads_set);
+    FD_SET(STDIN_FILENO, &reads_set);
 
     struct timeval timeout;
     timeout.tv_sec = 0;
