@@ -4,7 +4,6 @@
 
 SOCKET create_socket(std::string host, std::string port) {
   Logger::debug("Configuring address...");
-
   struct addrinfo hints;
   std::memset(&hints, 0, sizeof(hints));
   hints.ai_family = AF_INET;

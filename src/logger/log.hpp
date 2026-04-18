@@ -13,7 +13,6 @@
 #endif
 
 class Logger {
-
 public:
   enum Level { LOG_DEBUG, LOG_INFO, LOG_WARN, LOG_ERROR, LOG_FATAL };
 

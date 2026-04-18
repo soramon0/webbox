@@ -13,10 +13,10 @@ RESET    := \033[0m
 # Build Configuration
 ifdef release
     BUILD_TYPE := release
-    CXXFLAGS   += -O3 -DNDEBUG
+    CXXFLAGS   += -O3 -DDEBUG=0
 else
     BUILD_TYPE := debug
-    CXXFLAGS   += -g3 -O0 -DDEBUG
+    CXXFLAGS   += -g3 -O0 -DDEBUG=1
 endif
 
 # Verbose Mode
