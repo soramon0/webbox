@@ -3,6 +3,15 @@
 #include <cstdarg>
 #include <cstdio>
 
+#ifdef __GNUC__
+// a, b should be numbers. exmaple ATTRIBUTE_FORMAT(1, 2):
+// 1: The format string is the 1st argument
+// 2: The variadic arguments start at the 2nd position
+#define ATTRIBUTE_FORMAT(a, b) __attribute__((format(printf, a, b)))
+#else
+#define ATTRIBUTE_FORMAT(a, b)
+#endif
+
 class Logger {
 
 public:
@@ -10,16 +19,13 @@ public:
 
   static void setLevel(Level lvl);
 
-  // The numbers (1, 2) mean:
-  // 1: The format string is the 1st argument
-  // 2: The variadic arguments start at the 2nd position
-  static void debug(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
-  static void info(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
-  static void warn(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
-  static void error(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
-  static void fatal(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+  static void debug(const char *fmt, ...) ATTRIBUTE_FORMAT(1, 2);
+  static void info(const char *fmt, ...) ATTRIBUTE_FORMAT(1, 2);
+  static void warn(const char *fmt, ...) ATTRIBUTE_FORMAT(1, 2);
+  static void error(const char *fmt, ...) ATTRIBUTE_FORMAT(1, 2);
+  static void fatal(const char *fmt, ...) ATTRIBUTE_FORMAT(1, 2);
   static void fatalWith(int exitCode, const char *fmt, ...)
-      __attribute__((format(printf, 2, 3)));
+      ATTRIBUTE_FORMAT(2, 3);
 
 private:
   static Level minLevel;
