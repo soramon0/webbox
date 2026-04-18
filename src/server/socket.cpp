@@ -3,7 +3,7 @@
 #include <cstring>
 
 SOCKET create_socket(std::string host, std::string port) {
-  Logger::info("Configuring address...");
+  Logger::debug("Configuring address...");
 
   struct addrinfo hints;
   std::memset(&hints, 0, sizeof(hints));
@@ -16,7 +16,7 @@ SOCKET create_socket(std::string host, std::string port) {
     Logger::fatal("getaddrinfo() failed. (%d)", GETSOCKETERRNO());
   }
 
-  Logger::info("Creating socket...");
+  Logger::debug("Creating socket...");
   SOCKET socket_listen =
       socket(bind_address->ai_family, bind_address->ai_socktype,
              bind_address->ai_protocol);
