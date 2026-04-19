@@ -6,7 +6,12 @@ int main() {
     Logger::setLevel(Logger::LOG_DEBUG);
   }
 
-  SOCKET listen_socket = create_socket("0.0.0.0", "9000");
+  char host[] = "0.0.0.0";
+  char port[] = "9000";
+  SOCKET listen_socket = create_socket(host, port);
+  if (listen_socket == -1) {
+    Logger::fatal("could not listen on %s:%s", host, port);
+  }
   close(listen_socket);
 
   return 0;
