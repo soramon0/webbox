@@ -1,4 +1,5 @@
 #include "mime_type.h"
+#include <map>
 
 std::string get_content_type(const std::string &file_path) {
   static std::map<std::string, std::string> mime_map;

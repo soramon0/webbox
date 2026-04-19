@@ -2,7 +2,7 @@
 #include "logger/log.hpp"
 #include <cstring>
 
-SOCKET create_socket(std::string host, std::string port) {
+SOCKET create_socket(const char *host, const char *port) {
   Logger::debug("Configuring address...");
   struct addrinfo hints;
   std::memset(&hints, 0, sizeof(hints));
@@ -11,7 +11,7 @@ SOCKET create_socket(std::string host, std::string port) {
   hints.ai_flags = AI_PASSIVE;
 
   struct addrinfo *bind_address;
-  if (getaddrinfo(host.c_str(), port.c_str(), &hints, &bind_address)) {
+  if (getaddrinfo(host, port, &hints, &bind_address)) {
     Logger::error("getaddrinfo() failed. (%d)", GETSOCKETERRNO());
     return (-1);
   }
@@ -32,7 +32,7 @@ SOCKET create_socket(std::string host, std::string port) {
   }
   freeaddrinfo(bind_address);
 
-  Logger::info("Listening on http://%s:%s", host.c_str(), port.c_str());
+  Logger::info("Listening on http://%s:%s", host, port);
   if (listen(socket_listen, 10) < 0) {
     Logger::error("listen() failed. (%d)", GETSOCKETERRNO());
     return (-1);
