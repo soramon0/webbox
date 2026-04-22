@@ -130,19 +130,20 @@ void ClientManager::serve_resource(Client *client, std::string path) {
     size_t bytes_read = static_cast<size_t>(file.gcount());
     ssize_t bytes_sent = send_all(client->socket, buffer, bytes_read);
     if (bytes_sent <= 0) {
-      if (bytes_sent != 0) {
+      if (bytes_sent < 0) {
         Logger::debug("serve_resource(send): %s %s", host.c_str(),
                       path.c_str());
       }
       return drop_client(client->socket);
     }
   }
+  drop_client(client->socket);
 }
 
-ssize_t ClientManager::send_all(SOCKET s, const char *buf, size_t len) {
+ssize_t ClientManager::send_all(SOCKET s, const char *buf, size_t size) {
   ssize_t total_sent = 0;
-  while (static_cast<size_t>(total_sent) < len) {
-    ssize_t sent = send(s, buf + total_sent, len - total_sent, 0);
+  while (static_cast<size_t>(total_sent) < size) {
+    ssize_t sent = send(s, buf + total_sent, size - total_sent, 0);
     if (sent <= 0)
       return sent;
     total_sent += sent;
