@@ -31,7 +31,6 @@ public:
   static void drop_client(SOCKET s);
   static fd_set wait_on_clients(SOCKET server);
   static void serve_resource(Client *client, std::string path);
-  static int send_string(SOCKET s, const std::string &str);
-  static bool send_all(SOCKET s, const std::string &str);
-
+  static ssize_t send_all(SOCKET s, const char *buf, size_t len);
+  static ssize_t send_all(SOCKET s, const std::string &str);
 };

@@ -79,7 +79,7 @@ void send_400(Client *client) {
   std::string c400 = "HTTP/1.1 400 Bad Request\r\n"
                      "Connection: close\r\n"
                      "Content-Length: 11\r\n\r\nBad Request";
-  send(client->socket, c400.c_str(), c400.length(), 0);
+  ClientManager::send_all(client->socket, c400);
   ClientManager::drop_client(client->socket);
 }
 
@@ -87,13 +87,13 @@ void send_404(Client *client) {
   std::string c404 = "HTTP/1.1 404 Not Found\r\n"
                      "Connection: close\r\n"
                      "Content-Length: 9\r\n\r\nNot Found";
-  send(client->socket, c404.c_str(), c404.length(), 0);
+  ClientManager::send_all(client->socket, c404);
   ClientManager::drop_client(client->socket);
 }
 
 void ClientManager::serve_resource(Client *client, std::string path) {
-  Logger::debug("serve_resource: %s %s", client->get_host().c_str(),
-                path.c_str());
+  std::string host = client->get_host();
+  Logger::debug("serve_resource: %s %s", host.c_str(), path.c_str());
 
   if (path == "/")
     path = "/index.html";
@@ -127,37 +127,29 @@ void ClientManager::serve_resource(Client *client, std::string path) {
 
   char buffer[1024];
   while (file.read(buffer, sizeof(buffer)) || file.gcount() > 0) {
-    std::streamsize bytes_read = file.gcount();
-
-    std::streamsize total_sent = 0;
-    while (total_sent < bytes_read) {
-      int sent = send(client->socket, buffer + total_sent,
-                      static_cast<int>(bytes_read - total_sent), 0);
-      if (sent <= 0)
-        goto cleanup;
-      total_sent += sent;
+    size_t bytes_read = static_cast<size_t>(file.gcount());
+    ssize_t bytes_sent = send_all(client->socket, buffer, bytes_read);
+    if (bytes_sent <= 0) {
+      if (bytes_sent != 0) {
+        Logger::debug("serve_resource(send): %s %s", host.c_str(),
+                      path.c_str());
+      }
+      return drop_client(client->socket);
     }
   }
-
-cleanup:
-  file.close();
-  drop_client(client->socket);
 }
 
-
-ssize_t send_string(SOCKET s, const std::string &str) {
-  return send(s, str.c_str(), str.length(), 0);
-}
-
-ssize_t send_all(SOCKET s, const std::string &str) {
+ssize_t ClientManager::send_all(SOCKET s, const char *buf, size_t len) {
   ssize_t total_sent = 0;
-  const char *raw_ptr = str.c_str();
-
-  while ((size_t)total_sent < str.length()) {
-    ssize_t sent = send(s, raw_ptr + total_sent, str.length() - total_sent, 0);
+  while (static_cast<size_t>(total_sent) < len) {
+    ssize_t sent = send(s, buf + total_sent, len - total_sent, 0);
     if (sent <= 0)
       return sent;
     total_sent += sent;
   }
   return total_sent;
+}
+
+ssize_t ClientManager::send_all(SOCKET s, const std::string &str) {
+  return send_all(s, str.c_str(), str.length());
 }
