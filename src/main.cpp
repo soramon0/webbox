@@ -12,7 +12,7 @@ int main() {
   if (listen_socket == -1) {
     Logger::fatal("could not listen on %s:%s", host, port);
   }
-  close(listen_socket);
+  CLOSESOCKET(listen_socket);
 
   return 0;
 }

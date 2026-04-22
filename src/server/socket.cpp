@@ -12,7 +12,7 @@ SOCKET create_socket(const char *host, const char *port) {
 
   struct addrinfo *bind_address;
   if (getaddrinfo(host, port, &hints, &bind_address)) {
-    Logger::error("getaddrinfo() failed. (%d)", GETSOCKETERRNO());
+    Logger::error("getaddrinfo: failed. (%d)", GETSOCKETERRNO());
     return (-1);
   }
 
@@ -22,19 +22,19 @@ SOCKET create_socket(const char *host, const char *port) {
              bind_address->ai_protocol);
 
   if (!ISVALIDSOCKET(socket_listen)) {
-    Logger::error("socket() failed. (%d)", GETSOCKETERRNO());
+    Logger::error("socket: failed. (%d)", GETSOCKETERRNO());
     return (-1);
   }
 
   if (bind(socket_listen, bind_address->ai_addr, bind_address->ai_addrlen)) {
-    Logger::error("bind() failed. (%d)", GETSOCKETERRNO());
+    Logger::error("bind: failed. (%d)", GETSOCKETERRNO());
     return (-1);
   }
   freeaddrinfo(bind_address);
 
   Logger::info("Listening on http://%s:%s", host, port);
   if (listen(socket_listen, 10) < 0) {
-    Logger::error("listen() failed. (%d)", GETSOCKETERRNO());
+    Logger::error("listen: failed. (%d)", GETSOCKETERRNO());
     return (-1);
   }
   return socket_listen;
