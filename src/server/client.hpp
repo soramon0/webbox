@@ -12,7 +12,7 @@ public:
   struct sockaddr_storage address;
   SOCKET socket;
   char request[MAX_REQUEST_SIZE + 1];
-  int received;
+  size_t received;
 
   Client(SOCKET s);
 
@@ -23,10 +23,9 @@ private:
 };
 
 class ClientManager {
-private:
+public:
   static std::map<SOCKET, Client *> clients;
 
-public:
   static Client *get_client(SOCKET s);
   static void drop_client(SOCKET s);
   static fd_set wait_on_clients(SOCKET server);

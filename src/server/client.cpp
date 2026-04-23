@@ -76,39 +76,6 @@ fd_set ClientManager::wait_on_clients(SOCKET server) {
   return reads;
 }
 
-void send_400(Client *client) {
-  std::string body = "<html><body><h1>400 Bad Request</h1></body></html>";
-
-  ssize_t sent = HeadersBuilder(client->socket, "400 Bad Request")
-                     .with("Content-Type", "text/html")
-                     .with("Content-Length", body.length())
-                     .with("Connection", "close")
-                     .send();
-
-  if (sent > 0) {
-    send_all(client->socket, body);
-  }
-
-  ClientManager::drop_client(client->socket);
-}
-
-void send_404(Client *client) {
-  std::string body = "<html><body><h1>404 Not Found</h1><p>The requested "
-                     "resource was not found on this server.</p></body></html>";
-
-  ssize_t sent = HeadersBuilder(client->socket, "404 Not Found")
-                     .with("Content-Type", "text/html")
-                     .with("Content-Length", body.length())
-                     .with("Connection", "close")
-                     .send();
-
-  if (sent > 0) {
-    send_all(client->socket, body);
-  }
-
-  ClientManager::drop_client(client->socket);
-}
-
 void ClientManager::serve_resource(Client *client, std::string path) {
   std::string host = client->get_host();
   Logger::debug("serve_resource: %s %s", host.c_str(), path.c_str());
@@ -116,14 +83,14 @@ void ClientManager::serve_resource(Client *client, std::string path) {
   if (path == "/")
     path = "/index.html";
   if (path.length() > 100)
-    return send_400(client);
+    return send_400(client->socket);
   if (path.find("..") != std::string::npos)
-    return send_404(client);
+    return send_404(client->socket);
 
   std::string full_path = "public" + path;
   std::ifstream file(full_path.c_str(), std::ios::binary | std::ios::ate);
   if (!file.is_open()) {
-    return send_404(client);
+    return send_404(client->socket);
   }
 
   // std::ios::ate (at the end) lets us get the size immediately
@@ -152,7 +119,7 @@ void ClientManager::serve_resource(Client *client, std::string path) {
         Logger::error("serve_resource(): could not send body %s %s",
                       host.c_str(), path.c_str());
       }
-      return drop_client(client->socket);
+      break;
     }
   }
   drop_client(client->socket);
