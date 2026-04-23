@@ -1,10 +1,11 @@
 #include "client.hpp"
 #include "lib/mime_type.h"
 #include "logger/log.hpp"
+#include "server/headers_builder.hpp"
+#include "server/send.hpp"
 #include <cstdio>
 #include <fstream>
 #include <new>
-#include <sstream>
 #include <sys/select.h>
 
 Client::Client(SOCKET s)
@@ -76,18 +77,35 @@ fd_set ClientManager::wait_on_clients(SOCKET server) {
 }
 
 void send_400(Client *client) {
-  std::string c400 = "HTTP/1.1 400 Bad Request\r\n"
-                     "Connection: close\r\n"
-                     "Content-Length: 11\r\n\r\nBad Request";
-  ClientManager::send_all(client->socket, c400);
+  std::string body = "<html><body><h1>400 Bad Request</h1></body></html>";
+
+  ssize_t sent = HeadersBuilder(client->socket, "400 Bad Request")
+                     .with("Content-Type", "text/html")
+                     .with("Content-Length", body.length())
+                     .with("Connection", "close")
+                     .send();
+
+  if (sent > 0) {
+    send_all(client->socket, body);
+  }
+
   ClientManager::drop_client(client->socket);
 }
 
 void send_404(Client *client) {
-  std::string c404 = "HTTP/1.1 404 Not Found\r\n"
-                     "Connection: close\r\n"
-                     "Content-Length: 9\r\n\r\nNot Found";
-  ClientManager::send_all(client->socket, c404);
+  std::string body = "<html><body><h1>404 Not Found</h1><p>The requested "
+                     "resource was not found on this server.</p></body></html>";
+
+  ssize_t sent = HeadersBuilder(client->socket, "404 Not Found")
+                     .with("Content-Type", "text/html")
+                     .with("Content-Length", body.length())
+                     .with("Connection", "close")
+                     .send();
+
+  if (sent > 0) {
+    send_all(client->socket, body);
+  }
+
   ClientManager::drop_client(client->socket);
 }
 
@@ -103,10 +121,7 @@ void ClientManager::serve_resource(Client *client, std::string path) {
     return send_404(client);
 
   std::string full_path = "public" + path;
-
-  // Open file using ifstream in binary mode
   std::ifstream file(full_path.c_str(), std::ios::binary | std::ios::ate);
-
   if (!file.is_open()) {
     return send_404(client);
   }
@@ -115,15 +130,18 @@ void ClientManager::serve_resource(Client *client, std::string path) {
   std::streamsize size = file.tellg();
   file.seekg(0, std::ios::beg); // Rewind to start
 
-  std::string ct = get_content_type(full_path);
-  std::stringstream ss;
-
-  ss << "HTTP/1.1 200 OK\r\n"
-     << "Connection: close\r\n"
-     << "Content-Type: " << ct << "\r\n"
-     << "Content-Length: " << size << "\r\n"
-     << "\r\n";
-  send_all(client->socket, ss.str());
+  ssize_t headers_sent = HeadersBuilder(client->socket, "200 OK")
+                             .with("Connection", "close")
+                             .with("Content-Type", get_content_type(full_path))
+                             .with("Content-Length", static_cast<size_t>(size))
+                             .send();
+  if (headers_sent <= 0) {
+    if (headers_sent < 0) {
+      Logger::error("serve_resource(): could not send headers %s %s",
+                    host.c_str(), path.c_str());
+    }
+    return;
+  }
 
   char buffer[1024];
   while (file.read(buffer, sizeof(buffer)) || file.gcount() > 0) {
@@ -131,26 +149,11 @@ void ClientManager::serve_resource(Client *client, std::string path) {
     ssize_t bytes_sent = send_all(client->socket, buffer, bytes_read);
     if (bytes_sent <= 0) {
       if (bytes_sent < 0) {
-        Logger::debug("serve_resource(send): %s %s", host.c_str(),
-                      path.c_str());
+        Logger::error("serve_resource(): could not send body %s %s",
+                      host.c_str(), path.c_str());
       }
       return drop_client(client->socket);
     }
   }
   drop_client(client->socket);
-}
-
-ssize_t ClientManager::send_all(SOCKET s, const char *buf, size_t size) {
-  ssize_t total_sent = 0;
-  while (static_cast<size_t>(total_sent) < size) {
-    ssize_t sent = send(s, buf + total_sent, size - total_sent, 0);
-    if (sent <= 0)
-      return sent;
-    total_sent += sent;
-  }
-  return total_sent;
-}
-
-ssize_t ClientManager::send_all(SOCKET s, const std::string &str) {
-  return send_all(s, str.c_str(), str.length());
 }
