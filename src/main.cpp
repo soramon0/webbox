@@ -40,7 +40,7 @@ int main() {
       if (FD_ISSET(it->first, &reads)) {
         Client *c = it->second;
 
-        if (MAX_REQUEST_SIZE >= c->received) {
+        if (c->received >= MAX_REQUEST_SIZE) {
           it++;
           send_400(c->socket);
           continue;
