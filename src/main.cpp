@@ -5,6 +5,7 @@
 #include "server/socket.hpp"
 #include <cstring>
 #include <map>
+#include <sys/select.h>
 
 int main() {
   if (DEBUG) {
@@ -25,54 +26,58 @@ int main() {
           accept(server_socket, (struct sockaddr *)&client->address,
                  &client->address_len);
       if (!ISVALIDSOCKET(client->socket)) {
-        ClientManager::drop_client(client->socket);
+        ClientManager::drop_client(-1);
         Logger::error("could not accept connection. (%d)", GETSOCKETERRNO());
+      } else {
+        ClientManager::clients.erase(-1);
+        ClientManager::clients[client->socket] = client;
+        Logger::debug("new connection: %s", client->get_host().c_str());
       }
-      ClientManager::clients.erase(-1);
-      ClientManager::clients[client->socket] = client;
-      Logger::debug("new connection: %s", client->get_host().c_str());
     }
 
     std::map<SOCKET, Client *>::iterator it;
 
     for (it = ClientManager::clients.begin();
          it != ClientManager::clients.end();) {
-      if (FD_ISSET(it->first, &reads)) {
-        Client *c = it->second;
+      std::map<SOCKET, Client *>::iterator curr = it++;
+      Client *c = curr->second;
 
-        if (c->received >= MAX_REQUEST_SIZE) {
-          it++;
-          send_400(c->socket);
-          continue;
-        }
-        ssize_t r = recv(c->socket, c->request + c->received,
-                         MAX_REQUEST_SIZE - c->received, 0);
-        if (r < 1) {
-          it++;
-          Logger::debug("%s disconnected.", c->get_host().c_str());
-          ClientManager::drop_client(c->socket);
-          continue;
-        }
-        c->received += r;
-        c->request[c->received] = '\0';
+      // Only handle clients that are ready for reading
+      if (!FD_ISSET(c->socket, &reads))
+        continue;
 
-        char *q = std::strstr(c->request, "\r\n\r\n");
-        if (q) {
-          if (std::strncmp("GET /", c->request, 5)) {
-            send_400(c->socket);
-          } else {
-            char *path = c->request + 4;
-            char *path_end = std::strstr(path, " ");
-            if (!path_end) {
-              send_400(c->socket);
-            } else {
-              *path_end = '\0';
-              ClientManager::serve_resource(c, path);
-            }
-          }
-        }
+      if (c->received >= MAX_REQUEST_SIZE) {
+        send_400(c->socket);
+        continue;
       }
-      it++;
+      ssize_t r = recv(c->socket, c->request + c->received,
+                       MAX_REQUEST_SIZE - c->received, 0);
+      if (r < 1) {
+        Logger::debug("%s disconnected.", c->get_host().c_str());
+        ClientManager::drop_client(c->socket);
+        continue;
+      }
+      c->received += r;
+      c->request[c->received] = '\0';
+
+      char *q = std::strstr(c->request, "\r\n\r\n");
+      if (!q) {
+        continue;
+      }
+
+      if (std::strncmp("GET /", c->request, 5)) {
+        send_400(c->socket);
+        continue;
+      }
+
+      char *path = c->request + 4;
+      char *path_end = std::strstr(path, " ");
+      if (!path_end) {
+        send_400(c->socket);
+      } else {
+        *path_end = '\0';
+        ClientManager::serve_resource(c, path);
+      }
     }
   }
 
